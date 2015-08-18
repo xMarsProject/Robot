@@ -1,0 +1,36 @@
+<html>
+    <head>
+        <title>PI Remote</title>
+        <meta charset="UTF-8">
+    </head>
+<body>
+
+<script type="text/javascript">
+    function callPI(cmd,val)
+    {
+        var xhr_object = null;
+
+        if(window.XMLHttpRequest) 
+            xhr_object = new XMLHttpRequest();
+        else if(window.ActiveXObject) 
+            xhr_object = new ActiveXObject("Microsoft.XMLHTTP");
+            else {
+                alert("Votre navigateur ne supporte pas les objets XMLHTTPRequest...");
+                return; }
+        xhr_object.open("GET", "http://192.168.1.11:1234/remote?"+cmd+"="+val, true);
+
+        xhr_object.onreadystatechange = function() {
+        if (xhr_object.readyState==4 && xhr_object.status==200) alert(this.responseText); }
+
+        xhr_object.send(null);
+    }
+</script>
+
+
+<h1>remote for PI</h1>
+
+<button onclick="callPI('c','1');">LedOn</button>
+<button onclick="callPI('c','2');">LedOff</button>
+
+</body>
+</html>
