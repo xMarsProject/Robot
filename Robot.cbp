@@ -31,9 +31,13 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="main.c">
+		<Unit filename="driver.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="driver.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="test.cpp" />
+		<Unit filename="test.hpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

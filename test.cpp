@@ -172,9 +172,8 @@ void test_wheel(void)
     }
 }
 
-void *test_cam ( void *arg )
+void test_cam ( )
 {
-    (void) arg;
     cout<<"Opening Camera..."<<endl;
     cv::namedWindow("Video",CV_WINDOW_AUTOSIZE);
     raspicam::RaspiCam_Cv Camera;
@@ -210,14 +209,15 @@ void *test_cam ( void *arg )
 void test(void)
 {
     cout << "Test program to check if software and hardware are ok" << endl;
-    ///test_led();
+    //test_cam();
+    //test_led();
     //test_button();
     //test_sonar();
     //test_ps_led();
-    //test_motor();
+    test_motor();
     //test_accel();
     //test_servo();
-    test_wheel();
+    //test_wheel();
     cout << "Press a key to continue" << endl;
     cin.get();
 }
