@@ -1,0 +1,12 @@
+void Robot::do_bot()
+{
+    int obstacle=9999;
+    bot_motor_advance();
+    while ( obstacle>50 )
+    {
+        obstacle=bot_get_front_distance();
+        bot_wait(5);
+    }
+    std::cout << "Obstacle :" << obstacle << std :: endl;
+    bot_motor_stop();
+}
