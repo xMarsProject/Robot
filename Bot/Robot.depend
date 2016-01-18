@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1452895967 source:/home/pi/Robot/Robot/driver.c
+1453407690 source:/home/pi/Robot/Robot/driver.c
 	<stdio.h>
 	<time.h>
 	<stdlib.h>
@@ -11,17 +11,20 @@
 	<lirc/lirc_client.h>
 	"driver.h"
 
-1452896023 /home/pi/Robot/Robot/driver.h
+1453402616 /home/pi/Robot/Robot/driver.h
 	<termio.h>
 
-1450969009 source:/home/pi/Robot/Robot/main.cpp
+1453495683 source:/home/pi/Robot/Robot/main.cpp
 	<iostream>
+	<stdio.h>
 	"driver.h"
 	"test.hpp"
+	<string.h>
+	<stdlib.h>
 
 1452325571 /home/pi/Robot/Robot/test.hpp
 
-1452725937 source:/home/pi/Robot/Robot/test.cpp
+1453487050 source:/home/pi/Robot/Robot/test.cpp
 	"test.hpp"
 	"driver.h"
 	<raspicam/raspicam_cv.h>

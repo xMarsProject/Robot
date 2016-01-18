@@ -4,8 +4,7 @@
 
 #include <SPI.h>
 #include <Servo.h>
-#include <IRremote.h>
-#include <IRremoteInt.h>
+
 
 // Pin allocation
 #define IR_RECIEVER  8 // IR reciever
@@ -23,9 +22,6 @@
 #define RGT_SND      17 // Right Sound Sensor
 #define LFT_LIGHT    18 // Left Light Sensor
 #define RGT_LIGHT    15 // Right Light Sensor
-
-IRrecv irrecv(IR_RECIEVER);
-decode_results results;
 
 // Servo Motor moving limit
 #define max_h 146
@@ -49,10 +45,10 @@ int nb = 0; // Number of command read from the Raspberry
 
 void setup (void)
 {
-  irrecv.enableIRIn(); // Start the IR receiver
   Serial.begin (9600); // Setup serial (USB for debug purpose)
   //SPI setup
   pinMode(MISO, OUTPUT);
+  pinMode(SS,INPUT);
   SPCR |= _BV(SPE);
   SPCR |= _BV(SPIE);
   
@@ -70,16 +66,6 @@ void setup (void)
     vertical.write(posv);             
     delay(15);                      
   }
-  
-  /*
-  unsigned int i=2000,j,k;
-  Serial.println(i,BIN);
-  j=i>>8;
-  k=i<<8;
-  k=k>>8;
-  Serial.print(i>>8,BIN); Serial.println(i>>8);
-  Serial.print((i<<8)>>8,BIN); Serial.println((i<<8)>>8);*/
-
 } 
 
 /*
@@ -96,6 +82,7 @@ ISR (SPI_STC_vect)
   case 0:
     {// no command so c is a new command ...
       command = c;
+      //Serial.println(c);
       SPDR = 0;
       break;
     }
@@ -116,10 +103,11 @@ ISR (SPI_STC_vect)
         analog_value=analogRead(RGT_LIGHT); //Serial.print("RL"); Serial.println(analog_value);
         param[6]=(analog_value<<8)>>8;
         param[7]=analog_value>>8;
-        //for (int i=0; i<8; i++)
-        //  Serial.println(param[i]);
+        /*for (int i=0; i<8; i++)
+          Serial.println(param[i]);*/
       }
-      if (nb>=1 && nb<=8) SPDR=param[nb-1];
+      if (nb>=1 && nb<=8) 
+      {SPDR=param[nb-1];}
       break;
     }
    case 'H': 
@@ -189,15 +177,15 @@ void stop_it(void)                    //Stop
 
 void loop (void)
 {
-  if (digitalRead (SS) == HIGH)
+  if (digitalRead (SS) == LOW)
   {
     command = 0;
     nb=0;
+    //Serial.println("NC");
   } 
-  
-   if (irrecv.decode(&results)) {
-    Serial.println(results.value);
-    irrecv.resume(); // Receive the next value
+  else
+  {
+    //Serial.println("NOP");
   }
   delay(10);
 } 

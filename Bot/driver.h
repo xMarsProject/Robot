@@ -100,6 +100,8 @@ void bot_get_IrKey(void);
 int bot_get_ir_code(char *code);
 void bot_wait_IR_cmd(int key);
 int bot_wait_IR(void);
+char *bot_wait_IR_c(void);
+char *bot_get_ir_ccode(char *code);
 double bot_get_compass_xyz(short *x,short *y, short *z);
 #ifdef __cplusplus
 }

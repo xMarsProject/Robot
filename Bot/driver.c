@@ -50,6 +50,7 @@ int bot_init()
     digitalWrite(bot_right_sonar_trigger,HIGH);
     // Power shield
     pinMode(bot_spi_cmd, OUTPUT);
+    //digitalWrite(bot_spi_cmd,LOW);
     bot_ps = wiringPiSPISetup (0,1000000);
     if (bot_ps==-1)
     {
@@ -123,37 +124,44 @@ void bot_wait(unsigned int how_long)
 
 int bot_get_front_distance(void)
 {
-    long int start=0;
+    long int start=0,t=0,t1=0;
     digitalWrite(bot_front_sonar_trigger, HIGH);
     delayMicroseconds(20);
     digitalWrite(bot_front_sonar_trigger, LOW);
-    while (digitalRead(bot_front_sonar_echo)==LOW);
+    t=micros();
+    while (digitalRead(bot_front_sonar_echo)==LOW && (micros()-t)<2000);
     start = micros();
-    while (digitalRead(bot_front_sonar_echo)==HIGH);
+    t=micros();
+    while (digitalRead(bot_front_sonar_echo)==HIGH && (micros()-t)<2000);
     return (micros()-start)/58;
 }
 
 int bot_get_left_distance(void)
 {
-    long int start=0;
+    long int start=0,t=0,t1=0;
+    int k;
     digitalWrite(bot_left_sonar_trigger, HIGH);
     delayMicroseconds(20);
     digitalWrite(bot_left_sonar_trigger, LOW);
-    while (digitalRead(bot_left_sonar_echo)==LOW);
+    t=micros();
+    while (digitalRead(bot_left_sonar_echo)==LOW && (micros()-t)<2000);
     start = micros();
-    while (digitalRead(bot_left_sonar_echo)==HIGH);
+    t=micros();
+    while (digitalRead(bot_left_sonar_echo)==HIGH && (micros()-t)<2000);
     return (micros()-start)/58;
 }
 
 int bot_get_right_distance(void)
 {
-    long int start=0;
+    long int start=0,t=0,t1=0;
     digitalWrite(bot_right_sonar_trigger, HIGH);
     delayMicroseconds(20);
     digitalWrite(bot_right_sonar_trigger, LOW);
-    while (digitalRead(bot_right_sonar_echo)==LOW);
+    t=micros();
+    while (digitalRead(bot_right_sonar_echo)==LOW  && (micros()-t)<2000);
     start = micros();
-    while (digitalRead(bot_right_sonar_echo)==HIGH);
+    t=micros();
+    while (digitalRead(bot_right_sonar_echo)==HIGH  && (micros()-t)<2000);
     return (micros()-start)/58;
 }
 
@@ -168,7 +176,9 @@ void bot_ps_send(const char *s, int nb)
     unsigned char data[2];
     unsigned char data2[1]= {'x'};
     int i;
-    digitalWrite(10,LOW);
+
+digitalWrite(bot_spi_cmd,LOW);
+
     for(i=0; i<strlen(s); i++)
     {
         data[0]=s[i];
@@ -200,7 +210,6 @@ char * bot_ps_read(int nb)
         s[i]=data[0];
         //printf("[%c]%d[%c]",data[0],i,s[i]);
     }
-    digitalWrite(10,HIGH);
     s[nb]='\0';
     return s;
 }
@@ -223,8 +232,8 @@ void bot_get_sensor(int *lft_snd, int *rgt_snd, int *lft_lgt, int *rgt_lgt)
 {
     char *s;
     s=bot_ps_RW("A",8);
-    /*int i;
-    for (i=0; i<8; i++)
+    int i;
+   /* for (i=0; i<8; i++)
         printf("%d : %d\n",i,s[i]);*/
     *lft_snd=(s[1]<<8)|s[0]; // left sound sensor
     *rgt_snd=(s[3]<<8)|s[2]; // right sound sensor
@@ -366,6 +375,32 @@ int bot_get_ir_code(char *code)
     return 99;
 }
 
+char *bot_get_ir_ccode(char *code)
+{
+    if(strstr (code,"KEY_0")) return "KEY_0";
+    if(strstr (code,"KEY_1")) return "KEY_1";
+    if(strstr (code,"KEY_2")) return "KEY_2";
+    if(strstr (code,"KEY_3")) return "KEY_3";
+    if(strstr (code,"KEY_4")) return "KEY_4";
+    if(strstr (code,"KEY_5")) return "KEY_5";
+    if(strstr (code,"KEY_6")) return "KEY_6";
+    if(strstr (code,"KEY_7")) return "KEY_7";
+    if(strstr (code,"KEY_8")) return "KEY_8";
+    if(strstr (code,"KEY_9")) return "KEY_9";
+    if(strstr (code,"KEY_POWER")) return "KEY_POWER";
+    if(strstr (code,"KEY_VOLUMEUP")) return "KEY_VOLUMEUP";
+    if(strstr (code,"KEY_VOLUMEDOWN")) return "KEY_VOLUMEDOWN";
+    if(strstr (code,"KEY_UP")) return "KEY_UP";
+    if(strstr (code,"KEY_DOWN")) return "KEY_DOWN";
+    if(strstr (code,"KEY_REWIND")) return "KEY_REWIND";
+    if(strstr (code,"BTN_FORWARD")) return "BTN_FORWARD";
+    if(strstr (code,"KEY_PLAYPAUSE")) return "KEY_PLAYPAUSE";
+    if(strstr (code,"KEY_F1")) return "KEY_F1";
+    if(strstr (code,"KEY_F2")) return "KEY_F2";
+    if(strstr (code,"KEY_F3")) return "KEY_F3";
+    return 99;
+}
+
 void bot_wait_IR_cmd(int key)
 {
     char *code;
@@ -384,10 +419,9 @@ void bot_wait_IR_cmd(int key)
     }
 }
 
-int bot_wait_IR(void)
+int bot_wait_IR()
 {
     char *code;
-
     //Do stuff while LIRC socket is open 0=open -1=closed.
     while(lirc_nextcode(&code)==0)
     {
@@ -399,6 +433,22 @@ int bot_wait_IR(void)
         }
     }
     return 99;
+}
+
+char *bot_wait_IR_c()
+{
+    char *code;
+    //Do stuff while LIRC socket is open 0=open -1=closed.
+    while(lirc_nextcode(&code)==0)
+    {
+        //If code = NULL, meaning nothing was returned from LIRC socket,
+        //then skip lines below and start while loop again.
+        if(code==NULL) continue;
+        {
+            return code;
+        }
+    }
+    return "???";
 }
 
 void bot_get_IrKey (void)
@@ -482,56 +532,21 @@ void bot_get_IrKey (void)
 double bot_get_compass_xyz(short *x,short *y, short *z)
 {
 
-int xm,xl,ym,yl,zm,zl;
-double angle;
+    int xm,xl,ym,yl,zm,zl;
+    double angle;
 
-xm=wiringPiI2CReadReg8(compass,0x03);
-xl=wiringPiI2CReadReg8(compass,0x04);
-zm=wiringPiI2CReadReg8(compass,0x05);
-zl=wiringPiI2CReadReg8(compass,0x06);
-ym=wiringPiI2CReadReg8(compass,0x07);
-yl=wiringPiI2CReadReg8(compass,0x08);
+    xm=wiringPiI2CReadReg8(compass,0x03);
+    xl=wiringPiI2CReadReg8(compass,0x04);
+    zm=wiringPiI2CReadReg8(compass,0x05);
+    zl=wiringPiI2CReadReg8(compass,0x06);
+    ym=wiringPiI2CReadReg8(compass,0x07);
+    yl=wiringPiI2CReadReg8(compass,0x08);
 
+    *x=(xm<<8) | xl;
+    *y=(ym<<8) | yl;
+    *z=(zm<<8) | zl;
 
-*x=(xm<<8) | xl;
-*y=(ym<<8) | yl;
-*z=(zm<<8) | zl;
-
-angle=atan2((double)*x,(double)*y)*180/M_PI+180;
-
-/*
-    *x=wiringPiI2CReadReg8(compass,0x03)<<8; // X msb
-    *x|=wiringPiI2CReadReg8(compass,0x04); // X lsb
-    *y=wiringPiI2CReadReg8(compass,0x05)<<8; // Y msb
-    *y|=wiringPiI2CReadReg8(compass,0x06); // Z lsb
-    *z=wiringPiI2CReadReg8(compass,0x07)<<8; // Z msb
-    *z|=wiringPiI2CReadReg8(compass,0x08); // Z lsb
-
-
-
-*x=wiringPiI2CReadReg16(compass,0x03);
-*y=wiringPiI2CReadReg16(compass,0x05);
-*z=wiringPiI2CReadReg16(compass,0x07); */
-
-printf("A %d %d %d %f\n",*x,*y,*z,angle);
-//The output range of the HMC5883L is -2048 to 2047 and the input range of the ATN function
-//is -127 to 127.  I used the method to scale the output to the input discribed in Parallax's Smart
-//SCALEFACTOR = 65536 * (255/4095) = 4081
-//SCALEOFFSET = 2048
-//ATNFACTOR = 127
-//LOWRANGE = 0
-//HIGRANGE = 4095 (2048 + 2047 = 4095)
-/*
-    *x = *x + SCALEOFFSET;
-    *x = (*x<LOWRANGE?LOWRANGE:*x);
-    *x = (*x>HIGHRANGE?HIGHRANGE:*x);
-    *x = *x * SCALEFACTOR - ATNFACTOR;
-
-    *y = *y + SCALEOFFSET;
-    *y = (*y<LOWRANGE?LOWRANGE:*y);
-    *y = (*y>HIGHRANGE?HIGHRANGE:*y);
-    *y = *y * SCALEFACTOR - ATNFACTOR;*/
-//printf("B %d %d %d %f\n",*x,*y,*z,atan2(*x,*y*-1)/361 );
+    angle=atan2((double)*x,(double)*y)*180/M_PI+180;
     return angle;
 
 }

@@ -127,7 +127,7 @@ void test_wheel(void)
     }
 }
 
-void test_cam ( )
+void *test_cam ( void *arg )
 {
     cout<<"Opening Camera..."<<endl;
     cv::namedWindow("Video",CV_WINDOW_AUTOSIZE);
@@ -161,16 +161,18 @@ void test_cam ( )
 }
 
 void test_sensor()
+
 {
-    while (1)
-    {
-        int lft_snd;
+    int lft_snd;
         int rgt_snd;
         int lft_lgt;
         int rgt_lgt;
+    while (1)
+    {
+
         bot_get_sensor(&lft_snd,&rgt_snd,&lft_lgt,&rgt_lgt);
         cout << "Left snd="<<lft_snd<<",Right snd="<<rgt_snd<<",Left lgt="<<lft_lgt<<",Right lgt="<<rgt_lgt<<endl;
-        bot_wait(10);
+        bot_wait(1000);
     }
 }
 
@@ -203,11 +205,11 @@ void test(void)
     //test_ps_led();
     //test_motor();
     //test_accel();
-    //test_servo();
+    test_servo();
     //test_wheel();
     //test_sensor();
     //test_IR();
-    test_compass();
+    //test_compass();
     cout << "Press a key to continue" << endl;
     cin.get();
 }
