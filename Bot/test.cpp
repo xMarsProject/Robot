@@ -14,26 +14,6 @@ pthread_t th1;
     }*/
 using namespace std;
 
-void test_led()
-{
-    cout << "Press a key to continue"<<endl;
-    cin.get();
-    /*******************************************************
-    * LED
-    ********************************************************/
-    cout << "Bot blinks 3 times"<<endl;
-    bot_blink(3);
-}
-
-
-void test_button(void)
-{
-    /*******************************************************
-    * BUTTON
-    ********************************************************/
-    cout << "Press button on the board to continue" << endl;
-    bot_wait_button();
-}
 
 void test_sonar(void)
 {
@@ -51,15 +31,6 @@ void test_sonar(void)
     }
     cout << "Press a key to continue" << endl;
     cin.get();
-}
-
-void test_ps_led(void)
-{
-    /*******************************************************
-    * POWER SHIELD LED
-    ********************************************************/
-    cout << "On the power shield the TX LED blinks 10 times" << endl;
-    bot_ps_blink(10);
 }
 
 void test_servo(void)
@@ -98,24 +69,6 @@ void test_servo(void)
         }
         if (c==127) break;
     }
-}
-
-void test_accel(void)
-{
-    /*******************************************************
-        * POWER SHIELD ACCELEROMETER
-        ********************************************************/
-    cout << "Accelerometer is giving the pitch and roll" << endl;
-    double pitch,roll;
-    while(1)
-    {
-        bot_read_accel(&pitch,&roll);
-        cout << " pitch"<<pitch<<"° roll="<<roll<<"(press button to continue)"<<endl;
-        bot_wait(250);
-        if (bot_button_is_pushed()) break;
-    }
-    cout << "Press a key to continue" << endl;
-    cin.get();
 }
 
 void test_motor(void)
@@ -207,13 +160,37 @@ void test_cam ( )
     pthread_exit(NULL);
 }
 
-void test_sound(void)
+void test_sensor()
 {
-   while  (1)
-   {
-       cout<<"Left sound sensor"<<bot_get_left_sound()<<endl;
-       bot_wait(250);
-   }
+    while (1)
+    {
+        int lft_snd;
+        int rgt_snd;
+        int lft_lgt;
+        int rgt_lgt;
+        bot_get_sensor(&lft_snd,&rgt_snd,&lft_lgt,&rgt_lgt);
+        cout << "Left snd="<<lft_snd<<",Right snd="<<rgt_snd<<",Left lgt="<<lft_lgt<<",Right lgt="<<rgt_lgt<<endl;
+        bot_wait(10);
+    }
+}
+
+void test_IR(void)
+{
+    bot_wait_IR_cmd(KEY_POWER);
+    cout << "Power key pressed"<<endl;
+    cout << "key pressed :"<<bot_wait_IR()<<endl;
+}
+
+void test_compass(void)
+{
+    float angle;
+    short x,y,z;
+    while (1)
+    {
+        angle=bot_get_compass_xyz(&x,&y,&z);
+        //cout << "angle="<<angle<<" "<< x << y << x << endl;
+        bot_wait(250);
+    }
 }
 
 void test(void)
@@ -228,7 +205,9 @@ void test(void)
     //test_accel();
     //test_servo();
     //test_wheel();
-    test_sound();
+    //test_sensor();
+    //test_IR();
+    test_compass();
     cout << "Press a key to continue" << endl;
     cin.get();
 }

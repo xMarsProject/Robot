@@ -1,17 +1,17 @@
 # depslib dependency file v1.0
-1451746565 source:/home/pi/Robot/Robot/driver.c
+1452895967 source:/home/pi/Robot/Robot/driver.c
 	<stdio.h>
-	<wiringPi.h>
-	<wiringPiSPI.h>
 	<time.h>
 	<stdlib.h>
 	<string.h>
-	<termio.h>
-	<unistd.h>
 	<math.h>
+	<wiringPi.h>
+	<wiringPiSPI.h>
+	<wiringPiI2C.h>
+	<lirc/lirc_client.h>
 	"driver.h"
 
-1451746561 /home/pi/Robot/Robot/driver.h
+1452896023 /home/pi/Robot/Robot/driver.h
 	<termio.h>
 
 1450969009 source:/home/pi/Robot/Robot/main.cpp
@@ -19,9 +19,9 @@
 	"driver.h"
 	"test.hpp"
 
-1451746808 /home/pi/Robot/Robot/test.hpp
+1452325571 /home/pi/Robot/Robot/test.hpp
 
-1451746808 source:/home/pi/Robot/Robot/test.cpp
+1452725937 source:/home/pi/Robot/Robot/test.cpp
 	"test.hpp"
 	"driver.h"
 	<raspicam/raspicam_cv.h>
