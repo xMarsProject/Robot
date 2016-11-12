@@ -1,0 +1,22 @@
+#######################################
+# Syntax Coloring Map For MotorShield
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+motorshield	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+initialize      KEYWORD2
+setMotorDir     KEYWORD2
+setMotorSpeed   KEYWORD2
+getCurrent      KEYWORD2
+getTemperature  KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
