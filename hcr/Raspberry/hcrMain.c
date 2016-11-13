@@ -46,6 +46,7 @@ void afficheIHM(char (*ecran)[tailleMaxIHM][tailleMaxIHM],int NbLigne, int NbCol
 	init_pair(3, COLOR_BLACK, COLOR_BLACK);
 	init_pair(4, COLOR_BLUE, COLOR_BLACK);
 	init_pair(5, COLOR_GREEN, COLOR_BLACK);
+	init_pair(6, COLOR_CYAN, COLOR_BLACK);
 	attron(COLOR_PAIR(1));
 	int ligne=0, colonne=0;
 	for (ligne=1; ligne<NbLigne; ligne++)
@@ -114,7 +115,7 @@ int initIHM(char (*ecran)[tailleMaxIHM][tailleMaxIHM],int *NbLigne, int *NbColon
 		printf("Le fichier ecran.txt n'a pas été trouvé\n");
 		return 0;
 	}
-	messageIHM=subwin(stdscr, 6, 64, 18, 2);
+	messageIHM=subwin(stdscr, 6, 60, 14, 2);
 	scrollok(messageIHM,TRUE);
 	return 1;
 }
@@ -128,6 +129,7 @@ void majIHM(char (*message)[maxNbMessage][maxLongMessage], int nbMessage) // Aff
 {
 	int i,j;
 	attroff(A_REVERSE);
+	attron(A_BOLD);
 	// affichage du battement de coeur
 	if (blinkIHM)
 	{
@@ -147,12 +149,12 @@ void majIHM(char (*message)[maxNbMessage][maxLongMessage], int nbMessage) // Aff
 	else attron(COLOR_PAIR(3)); // efface
 	mvaddch(2,4,'C');
 	
-	// affichage témoin carte capteur
+	// affichage témoin carte puissance
 	if (hcrEtat.echoPuissance)
 		attron(COLOR_PAIR(5)); // affiche
 	else attron(COLOR_PAIR(3)); // efface
 	mvaddch(2,6,'P');
-	
+	attroff(A_BOLD);
 	// affichage des bumpers
 	for (j=0; j<hcrNbBumper; j++)
 	{
@@ -166,21 +168,26 @@ void majIHM(char (*message)[maxNbMessage][maxLongMessage], int nbMessage) // Aff
 		for (i=0; i<15; i++)
 			mvaddch(6,3+i+j*15+j*3,' ');
 	}
-	
-	// affichage des boutons intégrés à la carte roméo
-	for (j=0; j<hcrNbBouton; j++)
+	attroff(A_REVERSE);
+	attron(COLOR_PAIR(6)|A_BOLD); 
+	// affichage des distances des infra rouges
+	for (j=0; j<hcrNbIR; j++)
 	{
-		if (hcrEtat.bouton[j]) 
-			attron(COLOR_PAIR(5)|A_REVERSE); // affiche
-		else
+		char s[14];
+		sprintf(s,"%4d cm",hcrEtat.IR[j]);
+		int fin=0;
+		for (i=0; i<12; i++)
 		{
-			attron(COLOR_PAIR(3)); // efface
-			attroff(A_REVERSE);
+			if (s[i]=='\0')
+				fin=1;
+			if (fin)
+				mvaddch(10,2+i+j*12+j*2,' ');
+			else
+				mvaddch(10,2+i+j*12+j*2,s[i]);
 		}
-		for (i=0; i<11; i++)
-			mvaddch(14,3+i+j*11+j*3,' ');
 	}
-		
+	attroff(A_BOLD);
+	attroff(A_REVERSE);
 	// affichage des messages
 	for (j=0;j<nbMessage;j++)
 		if ((*message)[j][0]!='\0')

@@ -9,7 +9,7 @@
 
 #define tailleMaxIHM 100 // taille maximum du masque écran de l'IHM
 #define pulse 100 // nombre de milliseconde entre chaque passage de boucle
-#define pulseIHM 200 // nombre de centième de seconde avant rafraichissement interface
+#define pulseIHM 1000 // nombre de centième de seconde avant rafraichissement interface
 
 extern etatRobot hcrEtat;
 

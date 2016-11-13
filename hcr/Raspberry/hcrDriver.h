@@ -14,8 +14,8 @@
 #define hcrVersion "1.0"
 #define hcrOK 1
 #define hcrKO 0
-#define maxNbMessage 5 // nombre de message affiché dans le log de l'interface
-#define maxLongMessage 50 // longueur max des messages
+#define maxNbMessage 20 // nombre de message affiché dans le log de l'interface
+#define maxLongMessage 30 // longueur max des messages
 
 #define adresseI2Cromeo 0x12 // Adresse de la carte DFRobot Romeo V1.2
 #define adresseI2Carduino 0x08 // Adresse de la carte arduino pour le drive moteur
@@ -28,30 +28,33 @@
 #define hcrBumperMilieu 1
 #define hcrBumperDroit  2
 
-#define hcrNbBouton 5
-#define hcrBouton1 0
-#define hcrBouton2 1
-#define hcrBouton3 2
-#define hcrBouton4 3
-#define hcrBouton5 4
+#define hcrNbIR 5
+#define hcrIrGauche1 0
+#define hcrIrGauche2 1
+#define hcrIrMilieu  2
+#define hcrIrDroit2  3
+#define hcrIrDroit1  4
 
 // Constantes communes aux cartes 
 #define NO_DATA 0 // sert à l'écriture sur le bus I2C sans donnée dans le registre
 #define DATA_OK 2 // Protocol OK
 
-#define maxReg 1 // Nombre de registre
-
-// Liste des registres
-#define R_ETAT 0
-#define R_COMD 1
+// Liste des registres carte Roméo
+#define romeoMaxReg 6 // Nombre de registres
+#define romeoREG1 0 // Registre 1 (8 bits) bumper
+#define romeoREG2 1 // Registre 2 (8 bits) IR gauche1
+#define romeoREG3 2 // Registre 2 (8 bits) IR gauche2
+#define romeoREG4 3 // Registre 2 (8 bits) IR milieu
+#define romeoREG5 4 // Registre 2 (8 bits) IR droit1
+#define romeoREG6 5 // Registre 2 (8 bits) IR droit2
 
 typedef struct etatRobot etatRobot;
 struct etatRobot
 {
 	int echoCapteur;
 	int echoPuissance;
-    int bumper[3]; // bumper avant du robot
-    int bouton[5]; // boutons intégrés à la carte des capteurs (roméo)
+    int bumper[hcrNbBumper]; // bumper avant du robot
+    int IR[hcrNbIR]; // capteurs infrarouges
 };
 
 int hcrInit(char (*message)[maxNbMessage][maxLongMessage],int *nbMess); // Initialisation du pilote

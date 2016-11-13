@@ -54,42 +54,59 @@ int hcrInit(char (*message)[maxNbMessage][maxLongMessage],int *nbMess) // Initia
 	sprintf((*message)[(*nbMess)],"I2C drive moteur   :%X\n",adresseI2Carduino); (*nbMess)++; 
 	for (i=0; i<hcrNbBumper; i++)
 		hcrEtat.bumper[i]=0;
-	for (i=0; i<hcrNbBouton; i++)
-		hcrEtat.bouton[i]=0;
+	for (i=0; i<hcrNbIR; i++)
+		hcrEtat.IR[i]=0;
 	hcrEtat.echoCapteur=0;
 	hcrEtat.echoPuissance=0;
 	return hcrOK;
 }
 
-int hcrEtatMAJ(char (*message)[maxNbMessage][maxLongMessage],int *nbMess) // Mise à jour de l'état du robot
+// fonction permettant de convertir un nombre compris entre in_min et in_max
+// en un nombre compris entre out_min et out_max
+// ser pour décoder un nombre passé sur 8 bit (0 à 255) sur le bus I2C
+long map(long x, long in_min, long in_max, long out_min, long out_max)
 {
-	int i;
-	ecrisI2C(romeoI2C, R_ETAT, NO_DATA,(*message)[0]); // Demande de lecture d'état à la carte des capteurs
-	delay(pauseEcritureI2C);
-	int data=lisI2C(romeoI2C,(*message)[1]);
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void decodeRegistre1(int data)
+{
 	int bit;
-    for (i=15; i>=0; i--)
+	int i;
+	for (i=7; i>=0; i--)
 	{
 		bit=(((data>>i)&1)==1);
 		switch (i)
 		{
 			case 0 : hcrEtat.echoCapteur=bit; break;
-			case 1 : hcrEtat.bouton[hcrBouton1]=bit; break;
-			case 2 : hcrEtat.bouton[hcrBouton2]=bit; break;
-			case 3 : hcrEtat.bouton[hcrBouton3]=bit; break;
-			case 4 : hcrEtat.bouton[hcrBouton4]=bit; break;
-			case 5 : hcrEtat.bouton[hcrBouton5]=bit; break;
+			case 1 : hcrEtat.bumper[hcrBumperGauche]=bit; break;
+			case 2 : hcrEtat.bumper[hcrBumperMilieu]=bit; break;
+			case 3 : hcrEtat.bumper[hcrBumperDroit]=bit; break;
 		}
 	}
+}
 
-    hcrEtat.bumper[hcrBumperGauche]=0;
-    hcrEtat.bumper[hcrBumperMilieu]=1;
-    hcrEtat.bumper[hcrBumperDroit]=1;
-	/*hcrEtat.bouton[hcrBouton1]=1;
-	hcrEtat.bouton[hcrBouton2]=1;
-	hcrEtat.bouton[hcrBouton3]=0;
-	hcrEtat.bouton[hcrBouton4]=1;
-	hcrEtat.bouton[hcrBouton5]=1;*/
-	*nbMess=2;
+int hcrEtatMAJ(char (*message)[maxNbMessage][maxLongMessage],int *nbMess) // Mise à jour de l'état du robot
+{
+	int i;
+	int registre;
+	int data;
+	int bit;
+	*nbMess=0;
+	for (registre=0; registre<romeoMaxReg; registre++)
+	{
+		ecrisI2C(romeoI2C, registre, NO_DATA,(*message)[(*nbMess)++]); 
+		delay(pauseEcritureI2C);
+		data=lisI2C(romeoI2C,(*message)[(*nbMess)++]);
+		switch (registre)
+		{
+			case romeoREG1 : decodeRegistre1(data); break;
+			case romeoREG2 : hcrEtat.IR[hcrIrGauche1]=map(data,0,255,0,1000); break;
+			case romeoREG3 : hcrEtat.IR[hcrIrGauche2]=map(data,0,255,0,1000); break;
+			case romeoREG4 : hcrEtat.IR[hcrIrMilieu]=map(data,0,255,0,1000); break;
+			case romeoREG5 : hcrEtat.IR[hcrIrDroit2]=map(data,0,255,0,1000); break;
+			case romeoREG6 : hcrEtat.IR[hcrIrDroit1]=map(data,0,255,0,1000); break;
+		}
+	}
 	return 1;
 }
