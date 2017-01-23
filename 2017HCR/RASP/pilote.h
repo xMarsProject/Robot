@@ -33,7 +33,7 @@
 typedef struct etatCapteur etatCapteur;
 struct etatCapteur
 {
-	int echoCapteur;
+	int arretUrgence;
     int bumper[NbBumper]; // bumper avant du robot
     int IR[NbIR]; // capteurs infrarouges
 };

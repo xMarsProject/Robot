@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <termios.h>
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
 #include <math.h>
@@ -21,6 +22,7 @@ static int puissanceI2C; // Carte pilotant les moteurs
 
 etatCapteur capteur;
 etatMoteur moteur;
+struct termios clavier;
 
 //Initialisation du pilote 
 
@@ -37,7 +39,7 @@ int init(void)
         
     wiringPiISR(encoder0pinAG,INT_EDGE_BOTH,&tickGauche); // interruption encodeur gauche
     wiringPiISR(encoder0pinAD,INT_EDGE_BOTH,&tickDroit); // interruption encodeur droit
-	capteur.echoCapteur=1;
+	capteur.arretUrgence=0;
 	
 	for (i=0; i<3; i++)
 		capteur.bumper[i]=0;
@@ -56,7 +58,21 @@ int init(void)
 	moteur.sensG=0;        // Sens de rotation Moteur Gauche
 	moteur.sensD=0;        // Sens de rotation Moteur Doit
 
+	if (initTerminal(&clavier)==-1) // configuration du terminal
+    {
+        printf("Le clavier n'est pas initialisé ...\n");
+        return 0;
+    }
+
 	return 1;
+}
+
+// Fermeture du pilote
+
+int ferme(void)
+{
+	stop();
+	fermeTerminal (&clavier);
 }
 
 /*************************************************************************
@@ -111,25 +127,6 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-//Décodage des registres
-
-void decodeRegistre1(int data)
-{
-	int bit;
-	int i;
-	for (i=7; i>=0; i--)
-	{
-		bit=(((data>>i)&1)==1);
-		switch (i)
-		{
-			case 0 : capteur.echoCapteur=bit; break;
-			case 1 : capteur.bumper[BumperGauche]=bit; break;
-			case 2 : capteur.bumper[BumperMilieu]=bit; break;
-			case 3 : capteur.bumper[BumperDroit]=bit; break;
-		}
-	}
-}
-
 // Mise à jour de l'état des capteurs
 
 int majCapteur (void )
@@ -138,13 +135,12 @@ int majCapteur (void )
 	int registre;
 	int data;
 	int bit;
-	for (registre=0; registre<6; registre++)
+	for (registre=1; registre<6; registre++)
 	{
 		ecrisI2C(capteurI2C, registre, 0); 
 		data=lisI2C(capteurI2C);
 		switch (registre)
 		{
-			case 0 : decodeRegistre1(data); break;
 			case 1 : capteur.IR[IrGauche1]=map(data,0,255,0,1000); break;
 			case 2 : capteur.IR[IrGauche2]=map(data,0,255,0,1000); break;
 			case 3 : capteur.IR[IrMilieu]=map(data,0,255,0,1000); break;
@@ -153,6 +149,28 @@ int majCapteur (void )
 		}
 	}
 	return 1;
+}
+
+// Mise à jour de l'état des bumper
+
+int majBumper(void)
+{
+    int bit,i,data;
+	ecrisI2C(puissanceI2C, 5, 1); // Demande de lecture des bumpers et arret urgence
+	data=lisI2C(puissanceI2C); // Récupération de l'état des bumpers et arrêt d'urgence
+
+	for (i=7; i>=0; i--)
+	{
+		bit=(((data>>i)&1)==1);
+		switch (i)
+		{
+			case 0 : capteur.arretUrgence=bit; break;
+			case 1 : capteur.bumper[BumperGauche]=bit; break;
+			case 2 : capteur.bumper[BumperMilieu]=bit; break;
+			case 3 : capteur.bumper[BumperDroit]=bit; break;
+		}
+	}
+	return capteur.arretUrgence;
 }
 
 /*************************************************************************
@@ -185,29 +203,20 @@ void normalise(int *puissanceG, int *puissanceD)
 
 int calculNbTR(double kmH, int echantillionMS)
 {
-	return NbTickParTR/CirconferenceRoue*kmH*100000/3600/1000*echantillionMS;
+    double dNbTickParTR=NbTickParTR;
+    double dCirconferenceRoue=CirconferenceRoue;
+    double dechantillionMS=echantillionMS;
+	return dNbTickParTR/dCirconferenceRoue*kmH*100000/3600/1000*dechantillionMS;
 }
 
-int avance(int puissanceG, int puissanceD)
-{	
+int controleMoteur(int puissanceG, int sensG, int puissanceD, int sensD)
+{
 	normalise(&puissanceG, &puissanceD);
 	moteur.puissanceG=puissanceG;   // Puissance Moteur Gauche
 	moteur.puissanceD=puissanceD;   // Puissance Moteur Droit
-	moteur.sensG=1;        // Sens de rotation Moteur Gauche
-	moteur.sensD=1;        // Sens de rotation Moteur Doit
+	moteur.sensG=sensG;        // Sens de rotation Moteur Gauche
+	moteur.sensD=sensD;        // Sens de rotation Moteur Doit
 	majMoteur();
-	return 1;
-}
-
-int recule(int puissanceG, int puissanceD)
-{	
-	normalise(&puissanceG, &puissanceD);
-	moteur.puissanceG=puissanceG;   // Puissance Moteur Gauche
-	moteur.puissanceD=puissanceD;   // Puissance Moteur Droit
-	moteur.sensG=0;        // Sens de rotation Moteur Gauche
-	moteur.sensD=0;        // Sens de rotation Moteur Doit
-	majMoteur();
-	return 1;
 }
 
 int stop()
@@ -215,6 +224,12 @@ int stop()
 	moteur.puissanceG=0;   // Puissance Moteur Gauche
 	moteur.puissanceD=0;   // Puissance Moteur Droit
 	majMoteur();
+	return 1;
+}
+
+int resetMoteur()
+{
+	ecrisI2C(puissanceI2C, 6, 1); // Sortie mode urgence
 	return 1;
 }
 
@@ -235,3 +250,37 @@ int lisI2C(int canalI2C)
 	return data;
 }
 
+/**********************************************************************************************************
+ fonction de gestion du clavier
+***********************************************************************************************************/
+
+/* cette fonction reconfigure le terminal, et stocke */
+/* la configuration initiale a l'adresse prev */
+
+int initTerminal (struct termios *prev)
+{
+    struct termios new;
+    if (tcgetattr(fileno(stdin),prev)==-1)
+    {
+        perror("tcgetattr");
+        return -1;
+    }
+    new.c_iflag=prev->c_iflag;
+    new.c_oflag=prev->c_oflag;
+    new.c_cflag=prev->c_cflag;
+    new.c_lflag=0;
+    new.c_cc[VMIN]=1;
+    new.c_cc[VTIME]=0;
+    if (tcsetattr(fileno(stdin),TCSANOW,&new)==-1)
+    {
+        perror("tcsetattr");
+        return -1;
+    }
+    return 0;
+}
+
+/* cette fonction restaure le terminal avec la configuration stockee a l'adresse prev */
+int fermeTerminal (struct termios *prev)
+{
+    return tcsetattr(fileno(stdin),TCSANOW,prev);
+}

@@ -9,139 +9,137 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <termios.h>
+#include <pthread.h>
 
 #include "pilote.h"
 extern etatMoteur moteur;
 
-int main(int argc, char *argv[])
+double VitesseG=0;
+double VitesseD=0;
+int SensG=1;
+int SensD=1;
+
+pthread_t asservissement; // thread d'asservissement
+
+void *th_asservissement( void *rien )
 {
-	printf("%d",calculNbTR(1.65, 100));
-	FILE* fichier = NULL;
-    fichier = fopen("log.txt", "w");
-    init();
-    int puissanceG=114;
-    int puissanceD=114;
+    int duree=100;
+	int puissanceG;
+	int puissanceD;
     int NbTickG=0;
     int NbTickD=0;
     int nbTourRoue=150;
     double ecartG;
     double ecartD;
-    int k=0;
-   do {
+    do {
     	NbTickG=0;
     	NbTickD=0;
     	moteur.nbTickG=0;
 	  	moteur.nbTickD=0;
-    	avance(puissanceG,puissanceD);
+	  	puissanceG=calculNbTR(VitesseG<0?VitesseG*-1:VitesseG, duree);
+        puissanceD=calculNbTR(VitesseD<0?VitesseD*-1:VitesseD, duree);
+        //printf("%d %d\n",puissanceG,puissanceD);
+	  	controleMoteur(puissanceG,SensG,puissanceD,SensD);
     	delay(100);
-    	k+=100;
+    	if (majBumper()!=0 && VitesseG>0 && VitesseD>0)
+    	{
+	  		printf("Arret d'urgence\n");
+	  		VitesseG=0;
+	  		VitesseD=0;
+	  	}
     	NbTickG+=abs(moteur.nbTickG);
       	NbTickD+=abs(moteur.nbTickD);
-      	//fprintf(fichier,"A %d\t%d\t%d\t%d\n",puissanceG,puissanceD,NbTickG,NbTickD);
-      	printf("A %d\t%d\t%d\t%d\n",puissanceG,puissanceD,NbTickG,NbTickD);
       	ecartG=((double)(NbTickG-nbTourRoue)/nbTourRoue)*puissanceG*-1;
       	ecartD=((double)(NbTickD-nbTourRoue)/nbTourRoue)*puissanceD*-1;
         puissanceG+=(int)ecartG;
       	puissanceD+=(int)ecartD;
       	normalise(&puissanceG, &puissanceD);
-      	printf("B %d\t%d\t%d\t%d\n",puissanceG,puissanceD,NbTickG,NbTickD);
-      	//fprintf(fichier,"B %d\t%d\t%d\t%d\n",puissanceG,puissanceD,NbTickG,NbTickD);
-    } while ( NbTickG!=nbTourRoue || NbTickD!=nbTourRoue );
-    printf("\n%d\n",k);
-	fclose(fichier);
-	stop();
+    } while ( 1 );
 }
 
-/*
 int main(int argc, char *argv[])
 {
-int i;
-    int j;
-    int NbTickG=0;
-    int NbTickD=0;
 	init();
-	FILE* fichier = NULL;
-    fichier = fopen("log.txt", "w");
-    i=114;
-    avance(i);
-    for (j=1;j<40;j++)
+	if (pthread_create(&asservissement,NULL, th_asservissement,NULL )==-1)
+     printf("Erreur en lancement du programme d'asservissement\n");
+	int c;
+	float pas=0.25;
+	int avant=1;
+	VitesseG=0;
+    VitesseD=0;
+	while(1)
     {
-	  	moteur.nbTickG=0;
-	  	moteur.nbTickD=0;
-      	delay(100);
-      	NbTickG+=abs(moteur.nbTickG);
-      	NbTickD+=abs(moteur.nbTickD);
-	  fprintf(fichier,"%d\t%d\t%d\t%d\n",i,j,NbTickG,NbTickD);
-	  NbTickG=0;
-      NbTickD=0;
-	}
-	avance(0);
-	do {
-    moteur.nbTickG=0;
-	moteur.nbTickD=0;
-    NbTickG=0;
-    NbTickD=0;
-	delay(100);
-	NbTickG+=abs(moteur.nbTickG);
-    NbTickD+=abs(moteur.nbTickD);
-	fprintf(fichier,"%d\t%d\t%d\t%d\n",i,j,NbTickG,NbTickD);
-	} while ((NbTickG+NbTickD)>0);
-	fclose(fichier);
-	stop();
+        c=getc(stdin);
+        if (c==32) // Barre espace
+        {
+          VitesseD=VitesseG=0;
+          SensG=SensD=1;
+          resetMoteur();
+        }
+        if (c==27)
+        {
+            c=getc(stdin);
+            if (c==91)
+            {
+                c=getc(stdin);
+                switch(c)
+                {
+                case 68 : // Gauche Sens=0 Arrière sens=1 avant
+                    if (SensD!=0 || SensG!=0)
+                    {
+                	if (VitesseD<VitesseG)
+                	{
+                		VitesseD+=pas;
+                		VitesseD=(VitesseD>=2.75)?2.75:VitesseD;
+                		SensD=(VitesseD>=0)?1:0;
+                	} else
+                	{
+                    	VitesseG-=pas;
+                    	VitesseG=(VitesseG<=-2.75)?-2.75:VitesseG;
+                    	VitesseG=VitesseG<0?0:VitesseG;
+						SensG=1;
+					}
+					}
+                    break;
+                case 67 : // Droite
+                	if (SensD!=0 || SensG!=0)
+                    {
+                	if (VitesseG<VitesseD)
+                	{
+                		VitesseG+=pas;
+                		VitesseG=(VitesseG>=2.75)?2.75:VitesseG;
+                		SensG=1;
+                	} else
+                	{
+                    	VitesseD-=pas;
+                    	VitesseD=(VitesseD<=-2.75)?-2.75:VitesseD;
+						VitesseD=VitesseD<0?0:VitesseD;
+						SensD=1;
+					}
+					}
+                    break;
+                case 65 : // Haut
+                    VitesseG+=pas;
+                    VitesseD+=pas;
+                    VitesseD=(VitesseD>=2.75)?2.75:VitesseD;
+                    VitesseG=(VitesseG>=2.75)?2.75:VitesseG;
+                    SensD=(VitesseD>=0)?1:0;
+                    SensG=(VitesseG>=0)?1:0;
+                    break;
+                case 66 : // Bas
+                    VitesseG-=pas;
+                    VitesseD-=pas;
+                    VitesseD=(VitesseD<=-2.75)?-2.75:VitesseD;
+                    VitesseG=(VitesseG<=-2.75)?-2.75:VitesseG;
+                    SensD=(VitesseD>=0)?1:0;
+                    SensG=(VitesseG>=0)?1:0;
+                    break;
+                }
+            }
+        }
+        printf("%d %d %f %f\n",SensG,SensD,VitesseG,VitesseD);
+        if (c==127) break; // ESC
+    }
+    ferme();
 }
-*/
-
-/*
-int main(int argc, char *argv[])
-{
-int i;
-    int j;
-    int NbTickG=0;
-    int NbTickD=0;
-	init();
-	FILE* fichier = NULL;
-    fichier = fopen("log.txt", "w");
-    for (i=114; i<200; i++)
-    {
-	  avance(i);
-	  	moteur.nbTickG=0;
-	  	moteur.nbTickD=0;
-      	delay(100);
-      	NbTickG+=abs(moteur.nbTickG);
-      	NbTickD+=abs(moteur.nbTickD);
-	  fprintf(fichier,"%d\t%d\t%d\t%d\n",i,j,NbTickG,NbTickD);
-	  NbTickG=0;
-      NbTickD=0;
-	}
-	fclose(fichier);
-	stop();
-}*/
-/*
-int i;
-    int j;
-    int NbTickG;
-    int NbTickD;
-	init();
-    for (i=70; i<255; i++)
-    {
-	  avance(i);
-      for (j=0; j<4; j++)
-      {
-	  	moteur.nbTickG=0;
-	  	moteur.nbTickD=0;
-      	delay(100);
-      	NbTickG+=abs(moteur.nbTickG);
-      	NbTickD+=abs(moteur.nbTickD);
-      }
-	  printf("%d\t%d\t%d\t%d\n",i,j,NbTickG/4,NbTickD/4);
-	  NbTickG=0;
-      NbTickD=0;
-	}
-*/
-
-/*
-    init();
-    avance(255);
-    delay(5000);
-    stop();
-*/
