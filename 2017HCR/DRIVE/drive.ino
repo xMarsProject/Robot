@@ -21,7 +21,7 @@ int urgence = 0; // Mode urgence : 0=non, 1=oui
 
 #include <Wire.h>
 
-#define adresseCartePuissance 0x08 // Adresse 2IC
+#define adresseCartePuissance 0x13 // Adresse 2IC
 #define NO_DATA 0 // sert à l'écriture sur le bus I2C sans donnée dans le registre
 #define DATA_OK 1 // Protocol OK
 #define timeSleep 100// nombre de milliseconde entre chaque passe de mesure
@@ -125,6 +125,8 @@ void sendData()
 void I2Cwrite(int d)
 {
   Wire.write(d);
+  Serial.print(">");
+  Serial.print(d);
 }
 
 // fonction appelee des que le raspberry envoi des donnees

@@ -18,8 +18,8 @@
 // globales
 
 static int capteurI2C;    // Carte pilotant les IR, les bumpers et les encodeurs
-static int puissanceI2C; // Carte pilotant les moteurs
-
+static int puissanceI2C;  // Carte pilotant les moteurs
+static int boussoleI2C;   // La boussole
 etatCapteur capteur;
 etatMoteur moteur;
 struct termios clavier;
@@ -58,11 +58,24 @@ int init(void)
 	moteur.sensG=0;        // Sens de rotation Moteur Gauche
 	moteur.sensD=0;        // Sens de rotation Moteur Doit
 
+    boussoleI2C=wiringPiI2CSetup(adresseI2Cboussole);
+    if (boussoleI2C==-1)
+    {
+        printf("La boussole n'est pas initialisée\n");
+        return 0;
+    }
+    if (wiringPiI2CWriteReg8(boussoleI2C,0x02,0x00)==-1) // mode de lecture en continu
+    {
+        printf("La boussole n'est pas initialisée\n");
+        return 0;
+    }
+
+	/*
 	if (initTerminal(&clavier)==-1) // configuration du terminal
     {
         printf("Le clavier n'est pas initialisé ...\n");
         return 0;
-    }
+    }*/
 
 	return 1;
 }
@@ -72,7 +85,7 @@ int init(void)
 int ferme(void)
 {
 	stop();
-	fermeTerminal (&clavier);
+	//fermeTerminal (&clavier);
 }
 
 /*************************************************************************
@@ -121,7 +134,7 @@ void tickDroit()
 
 // fonction permettant de convertir un nombre compris entre in_min et in_max
 // en un nombre compris entre out_min et out_max
-// ser pour décoder un nombre passé sur 8 bit (0 à 255) sur le bus I2C
+// sert pour décoder un nombre passé sur 8 bit (0 à 255) sur le bus I2C
 long map(long x, long in_min, long in_max, long out_min, long out_max)
 {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -131,34 +144,32 @@ long map(long x, long in_min, long in_max, long out_min, long out_max)
 
 int majCapteur (void )
 {
-    int i;
-	int registre;
-	int data;
-	int bit;
-	for (registre=1; registre<6; registre++)
+    int bit,i,data;
+	ecrisI2C(capteurI2C, 0, 0); // Demande l'état des infra rouges
+	data=lisI2C(capteurI2C); // Récupération de l'état (0 = Ok, 1 = obstacle <20 cm)
+	for (i=7; i>=0; i--)
 	{
-		ecrisI2C(capteurI2C, registre, 0); 
-		data=lisI2C(capteurI2C);
-		switch (registre)
+		bit=(((data>>i)&1)==1);
+		switch (i)
 		{
-			case 1 : capteur.IR[IrGauche1]=map(data,0,255,0,1000); break;
-			case 2 : capteur.IR[IrGauche2]=map(data,0,255,0,1000); break;
-			case 3 : capteur.IR[IrMilieu]=map(data,0,255,0,1000); break;
-			case 4 : capteur.IR[IrDroit2]=map(data,0,255,0,1000); break;
-			case 5 : capteur.IR[IrDroit1]=map(data,0,255,0,1000); break;
+			case 0 : capteur.IR[IrGauche1]=bit; break;
+			case 1 : capteur.IR[IrGauche2]=bit; break;
+			case 2 : capteur.IR[IrMilieu]=bit; break;
+			case 3 : capteur.IR[IrDroit1]=bit; break;
+			case 4 : capteur.IR[IrDroit2]=bit; break;
 		}
-	}
+	}	
 	return 1;
 }
 
-// Mise à jour de l'état des bumper
+// Mise à jour de l'état des bumpers
 
 int majBumper(void)
 {
-    int bit,i,data;
+    int bit,i,data,ok;
 	ecrisI2C(puissanceI2C, 5, 1); // Demande de lecture des bumpers et arret urgence
 	data=lisI2C(puissanceI2C); // Récupération de l'état des bumpers et arrêt d'urgence
-
+	if (data>15 || data<0 ) return 0; // Parfois il y a des valeurs erratiques
 	for (i=7; i>=0; i--)
 	{
 		bit=(((data>>i)&1)==1);
@@ -198,10 +209,10 @@ void normalise(int *puissanceG, int *puissanceD)
 	*puissanceD=(*puissanceD<0)?0:*puissanceD;
 }
 
-//donne le nb de tour de roue en fonction de la vitesse en kmH et de la durée de
+//donne le nb de tick de roue encodeuse en fonction de la vitesse en kmH et de la durée de
 // l'échantillonnage en milliseconde
 
-int calculNbTR(double kmH, int echantillionMS)
+int calculNbTck(double kmH, int echantillionMS)
 {
     double dNbTickParTR=NbTickParTR;
     double dCirconferenceRoue=CirconferenceRoue;
@@ -283,4 +294,30 @@ int initTerminal (struct termios *prev)
 int fermeTerminal (struct termios *prev)
 {
     return tcsetattr(fileno(stdin),TCSANOW,prev);
+}
+
+/**********************************************************************************************************
+ Compass Management
+***********************************************************************************************************/
+
+int majBoussole( void )
+{
+    short int x,y,z;
+    int xm,xl,ym,yl,zm,zl;
+    double angle;
+
+    xm=wiringPiI2CReadReg8(boussoleI2C,0x03);
+    xl=wiringPiI2CReadReg8(boussoleI2C,0x04);
+    zm=wiringPiI2CReadReg8(boussoleI2C,0x05);
+    zl=wiringPiI2CReadReg8(boussoleI2C,0x06);
+    ym=wiringPiI2CReadReg8(boussoleI2C,0x07);
+    yl=wiringPiI2CReadReg8(boussoleI2C,0x08);
+
+    x=(xm<<8) | xl;
+    y=(ym<<8) | yl;
+    z=(zm<<8) | zl;
+    angle=atan2((double)x,(double)y)*180/M_PI+180;
+    capteur.angle=angle;
+    	//printf("%d %d %d %f\n",x,y,z,angle);
+    return (int)angle;
 }
