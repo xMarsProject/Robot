@@ -35,7 +35,8 @@ struct etatCapteur
 {
 	int arretUrgence;
     int bumper[NbBumper]; // bumper avant du robot
-    int IR[NbIR]; // capteurs infrarouges
+    int IR[NbIR];         // capteurs infrarouges
+    int angle;            // boussole (angle en degré)
 };
 
 typedef struct etatMoteur etatMoteur;
@@ -61,8 +62,9 @@ struct etatMoteur
 #define encoder0pinBG 22 // Port B de l'encodeur moteur gauche
 #define encoder0pinBD 0 // Port B de l'encodeur moteur droit
 
-#define adresseI2Ccapteur 0x12 // Adresse de la carte des capteurs
-#define adresseI2Cpuissance 0x08 // Adresse de la carte de puissance
+#define adresseI2Ccapteur   0x12 // Adresse de la carte des capteurs
+#define adresseI2Cpuissance 0x13 // Adresse de la carte de puissance
+#define adresseI2Cboussole  0x1E // adresse de la boussole 
 
 //Initialisation du pilote
 int init(void);
